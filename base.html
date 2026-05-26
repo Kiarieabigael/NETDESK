@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}NetDesk{% endblock %} — Network Monitor</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.0/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0e1a;
+            --bg-secondary: #0f1629;
+            --bg-card: #131c35;
+            --bg-card-hover: #1a2545;
+            --accent-blue: #2563eb;
+            --accent-cyan: #06b6d4;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --accent-yellow: #f59e0b;
+            --accent-purple: #8b5cf6;
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --text-muted: #475569;
+            --border: #1e3a5f;
+            --sidebar-width: 260px;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Sora', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+        }
+        /* SIDEBAR */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            top: 0; left: 0; bottom: 0;
+            z-index: 100;
+        }
+        .sidebar-brand {
+            padding: 1.5rem 1.5rem 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .brand-logo {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: var(--accent-cyan);
+            letter-spacing: -0.5px;
+            text-decoration: none;
+        }
+        .brand-logo span { color: var(--accent-blue); }
+        .brand-tagline {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            margin-top: 3px;
+        }
+        .sidebar-nav { padding: 1.2rem 0.75rem; flex: 1; }
+        .nav-section-label {
+            font-size: 0.62rem;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            padding: 0.5rem 0.75rem 0.3rem;
+            margin-top: 0.5rem;
+        }
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.65rem 0.9rem;
+            border-radius: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 400;
+            transition: all 0.18s ease;
+            margin-bottom: 2px;
+        }
+        .nav-link i { font-size: 1rem; width: 1.1rem; }
+        .nav-link:hover { background: var(--bg-card); color: var(--text-primary); }
+        .nav-link.active {
+            background: rgba(37,99,235,0.18);
+            color: var(--accent-cyan);
+            border-left: 3px solid var(--accent-cyan);
+        }
+        .sidebar-footer {
+            padding: 1rem 1.25rem;
+            border-top: 1px solid var(--border);
+        }
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .user-avatar {
+            width: 34px; height: 34px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 0.8rem;
+        }
+        .user-name { font-size: 0.82rem; font-weight: 600; }
+        .user-role { font-size: 0.68rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; }
+
+        /* MAIN CONTENT */
+        .main-content {
+            margin-left: var(--sidebar-width);
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        .topbar {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0; z-index: 50;
+        }
+        .page-title { font-size: 1.1rem; font-weight: 600; }
+        .page-subtitle { font-size: 0.75rem; color: var(--text-muted); }
+        .topbar-actions { display: flex; align-items: center; gap: 1rem; }
+        .content-area { padding: 2rem; flex: 1; }
+
+        /* CARDS */
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.4rem;
+            transition: all 0.2s ease;
+        }
+        .stat-card:hover { border-color: var(--accent-blue); transform: translateY(-2px); }
+        .stat-icon {
+            width: 44px; height: 44px;
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+        }
+        .stat-value { font-size: 2rem; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+        .stat-label { font-size: 0.78rem; color: var(--text-secondary); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.05em; }
+
+        /* TABLES */
+        .data-table { width: 100%; border-collapse: collapse; }
+        .data-table th {
+            padding: 0.75rem 1rem;
+            font-size: 0.72rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border);
+            font-weight: 600;
+            text-align: left;
+        }
+        .data-table td {
+            padding: 0.9rem 1rem;
+            font-size: 0.875rem;
+            border-bottom: 1px solid rgba(30,58,95,0.5);
+            color: var(--text-primary);
+        }
+        .data-table tr:hover td { background: rgba(37,99,235,0.05); }
+
+        /* BADGES */
+        .badge-status {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 0.3rem 0.75rem;
+            border-radius: 100px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+        .badge-status::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+        .badge-online { background: rgba(16,185,129,0.12); color: var(--accent-green); }
+        .badge-offline { background: rgba(239,68,68,0.12); color: var(--accent-red); }
+        .badge-unknown { background: rgba(100,116,139,0.12); color: #64748b; }
+        .badge-open { background: rgba(37,99,235,0.12); color: var(--accent-blue); }
+        .badge-in_progress { background: rgba(245,158,11,0.12); color: var(--accent-yellow); }
+        .badge-resolved { background: rgba(16,185,129,0.12); color: var(--accent-green); }
+        .badge-closed { background: rgba(100,116,139,0.12); color: #64748b; }
+        .badge-critical { background: rgba(239,68,68,0.12); color: var(--accent-red); }
+        .badge-high { background: rgba(245,158,11,0.12); color: var(--accent-yellow); }
+        .badge-medium { background: rgba(37,99,235,0.12); color: var(--accent-blue); }
+        .badge-low { background: rgba(100,116,139,0.12); color: #64748b; }
+
+        /* PANEL */
+        .panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+        }
+        .panel-header {
+            padding: 1.1rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .panel-title { font-size: 0.875rem; font-weight: 600; }
+        .panel-body { padding: 1.5rem; }
+
+        /* BUTTONS */
+        .btn-primary-nd {
+            background: var(--accent-blue);
+            color: white;
+            border: none;
+            padding: 0.55rem 1.25rem;
+            border-radius: 8px;
+            font-size: 0.83rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.18s;
+            font-family: 'Sora', sans-serif;
+            display: inline-flex; align-items: center; gap: 6px;
+        }
+        .btn-primary-nd:hover { background: #1d4ed8; transform: translateY(-1px); }
+        .btn-danger-nd {
+            background: rgba(239,68,68,0.12);
+            color: var(--accent-red);
+            border: 1px solid rgba(239,68,68,0.25);
+            padding: 0.35rem 0.8rem;
+            border-radius: 6px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.18s;
+            font-family: 'Sora', sans-serif;
+        }
+        .btn-danger-nd:hover { background: rgba(239,68,68,0.25); }
+        .btn-ghost {
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            cursor: pointer;
+            transition: all 0.18s;
+            font-family: 'Sora', sans-serif;
+            display: inline-flex; align-items: center; gap: 6px;
+        }
+        .btn-ghost:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+
+        /* FORM ELEMENTS */
+        .form-input {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 0.6rem 0.9rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            width: 100%;
+            font-family: 'Sora', sans-serif;
+            transition: border-color 0.18s;
+        }
+        .form-input:focus { outline: none; border-color: var(--accent-blue); }
+        .form-label { font-size: 0.78rem; color: var(--text-secondary); margin-bottom: 5px; font-weight: 600; letter-spacing: 0.04em; display: block; }
+        select.form-input option { background: var(--bg-card); }
+
+        /* MODAL */
+        .modal-nd {
+            display: none;
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 200;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-nd.show { display: flex; }
+        .modal-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 2rem;
+            width: 100%;
+            max-width: 480px;
+        }
+        .modal-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 1.5rem; }
+
+        /* ALERT ITEMS */
+        .alert-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            padding: 0.9rem 1rem;
+            border-bottom: 1px solid rgba(30,58,95,0.4);
+        }
+        .alert-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            margin-top: 5px;
+            flex-shrink: 0;
+        }
+        .dot-critical { background: var(--accent-red); box-shadow: 0 0 6px var(--accent-red); }
+        .dot-warning { background: var(--accent-yellow); }
+        .dot-info { background: var(--accent-cyan); }
+
+        /* PULSE ANIMATION */
+        @keyframes pulse { 0%,100%{ opacity:1; } 50%{ opacity:0.4; } }
+        .pulse { animation: pulse 2s infinite; }
+
+        /* SCROLLBAR */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: var(--bg-primary); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+
+        /* RESPONSIVE */
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); }
+            .main-content { margin-left: 0; }
+        }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <div class="sidebar-brand">
+            <a href="/dashboard" class="brand-logo">Net<span>Desk</span></a>
+            <div class="brand-tagline">Network &amp; IT Management</div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <div class="nav-section-label">Overview</div>
+            <a href="/dashboard" class="nav-link {% if request.url.path == '/dashboard' %}active{% endif %}">
+                <i class="bi bi-grid-1x2"></i> Dashboard
+            </a>
+
+            <div class="nav-section-label">Monitoring</div>
+            <a href="/devices" class="nav-link {% if '/devices' in request.url.path %}active{% endif %}">
+                <i class="bi bi-hdd-network"></i> Devices
+            </a>
+            <a href="/alerts" class="nav-link {% if '/alerts' in request.url.path %}active{% endif %}">
+                <i class="bi bi-bell"></i> Alerts
+                {% if stats is defined and stats.unread_alerts > 0 %}
+                <span style="margin-left:auto;background:var(--accent-red);color:white;font-size:0.65rem;font-weight:700;padding:1px 7px;border-radius:100px;">{{ stats.unread_alerts }}</span>
+                {% endif %}
+            </a>
+
+            <div class="nav-section-label">Support</div>
+            <a href="/tickets" class="nav-link {% if '/tickets' in request.url.path %}active{% endif %}">
+                <i class="bi bi-ticket"></i> Tickets
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="user-info">
+                <div class="user-avatar">{{ user.username[0].upper() if user else 'U' }}</div>
+                <div>
+                    <div class="user-name">{{ user.username if user else 'User' }}</div>
+                    <div class="user-role">{{ user.role if user else '' }}</div>
+                </div>
+                <a href="/auth/logout" style="margin-left:auto;color:var(--text-muted);font-size:1rem;" title="Logout">
+                    <i class="bi bi-box-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </aside>
+
+    <!-- MAIN -->
+    <div class="main-content">
+        <div class="topbar">
+            <div>
+                <div class="page-title">{% block page_title %}NetDesk{% endblock %}</div>
+                <div class="page-subtitle">{% block page_subtitle %}{% endblock %}</div>
+            </div>
+            <div class="topbar-actions">
+                <span style="font-size:0.78rem;color:var(--text-muted);font-family:'JetBrains Mono',monospace;" id="live-clock"></span>
+                {% block topbar_actions %}{% endblock %}
+            </div>
+        </div>
+
+        <div class="content-area">
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Live clock
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('live-clock').textContent =
+                now.toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'}) + ' ' +
+                now.toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+        }
+        updateClock();
+        setInterval(updateClock, 1000);
+    </script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

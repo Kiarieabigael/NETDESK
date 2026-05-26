@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+{% block title %}Tickets{% endblock %}
+{% block page_title %}IT Helpdesk Tickets{% endblock %}
+{% block page_subtitle %}Track and manage support requests{% endblock %}
+
+{% block topbar_actions %}
+<button class="btn-primary-nd" onclick="document.getElementById('createModal').classList.add('show')">
+    <i class="bi bi-plus-lg"></i> New Ticket
+</button>
+{% endblock %}
+
+{% block content %}
+<!-- Ticket stats mini -->
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem;">
+    {% set open_count = tickets|selectattr('status','eq','open')|list|length %}
+    {% set prog_count = tickets|selectattr('status','eq','in_progress')|list|length %}
+    {% set res_count = tickets|selectattr('status','eq','resolved')|list|length %}
+    {% set crit_count = tickets|selectattr('priority','eq','critical')|list|length %}
+    <div class="stat-card" style="padding:1rem 1.2rem;">
+        <div style="font-size:1.5rem;font-weight:700;color:var(--accent-blue);font-family:'JetBrains Mono',monospace;">{{ open_count }}</div>
+        <div style="font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-top:2px;">Open</div>
+    </div>
+    <div class="stat-card" style="padding:1rem 1.2rem;">
+        <div style="font-size:1.5rem;font-weight:700;color:var(--accent-yellow);font-family:'JetBrains Mono',monospace;">{{ prog_count }}</div>
+        <div style="font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-top:2px;">In Progress</div>
+    </div>
+    <div class="stat-card" style="padding:1rem 1.2rem;">
+        <div style="font-size:1.5rem;font-weight:700;color:var(--accent-green);font-family:'JetBrains Mono',monospace;">{{ res_count }}</div>
+        <div style="font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-top:2px;">Resolved</div>
+    </div>
+    <div class="stat-card" style="padding:1rem 1.2rem;">
+        <div style="font-size:1.5rem;font-weight:700;color:var(--accent-red);font-family:'JetBrains Mono',monospace;">{{ crit_count }}</div>
+        <div style="font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-top:2px;">Critical</div>
+    </div>
+</div>
+
+<!-- Filter bar -->
+<div style="display:flex;gap:0.75rem;margin-bottom:1rem;flex-wrap:wrap;">
+    <button class="filter-btn active" data-filter="all">All</button>
+    <button class="filter-btn" data-filter="open">Open</button>
+    <button class="filter-btn" data-filter="in_progress">In Progress</button>
+    <button class="filter-btn" data-filter="resolved">Resolved</button>
+    <button class="filter-btn" data-filter="closed">Closed</button>
+    <input type="text" id="ticketSearch" class="form-input" placeholder="Search tickets..." style="width:220px;padding:0.4rem 0.8rem;font-size:0.82rem;margin-left:auto;">
+</div>
+
+<div class="panel">
+    <div style="overflow-x:auto;">
+        <table class="data-table" id="ticketTable">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Title</th>
+                    <th>Priority</th>
+                    <th>Status</th>
+                    <th>Device</th>
+                    <th>Assigned To</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if tickets %}
+                    {% for ticket in tickets %}
+                    <tr data-status="{{ ticket.status }}">
+                        <td style="font-family:'JetBrains Mono',monospace;font-size:0.78rem;color:var(--text-muted);">#{{ ticket.id }}</td>
+                        <td>
+                            <div style="font-weight:600;font-size:0.875rem;">{{ ticket.title }}</div>
+                            <div style="font-size:0.72rem;color:var(--text-muted);margin-top:2px;">{{ ticket.description[:80] }}{% if ticket.description and ticket.description|length > 80 %}…{% endif %}</div>
+                        </td>
+                        <td><span class="badge-status badge-{{ ticket.priority }}">{{ ticket.priority }}</span></td>
+                        <td><span class="badge-status badge-{{ ticket.status }}">{{ ticket.status.replace('_',' ') }}</span></td>
+                        <td style="font-size:0.82rem;color:var(--text-secondary);">
+                            {{ ticket.device.device_name if ticket.device else '—' }}
+                        </td>
+                        <td style="font-size:0.82rem;color:var(--text-secondary);">
+                            {{ ticket.assignee.username if ticket.assignee else '—' }}
+                        </td>
+                        <td style="font-size:0.75rem;color:var(--text-muted);font-family:'JetBrains Mono',monospace;">
+                            {{ ticket.created_at.strftime('%d %b %Y') }}
+                        </td>
+                        <td>
+                            <div style="display:flex;gap:0.5rem;">
+                                {% if user.role in ['admin', 'technician'] %}
+                                <button class="btn-ghost" style="padding:0.3rem 0.7rem;font-size:0.75rem;" onclick="openUpdate({{ ticket.id }}, '{{ ticket.status }}')">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                {% endif %}
+                                {% if user.role == 'admin' %}
+                                <form method="post" action="/tickets/delete/{{ ticket.id }}" style="display:inline;" onsubmit="return confirm('Delete this ticket?')">
+                                    <button type="submit" class="btn-danger-nd"><i class="bi bi-trash3"></i></button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr><td colspan="8" style="text-align:center;padding:3rem;color:var(--text-muted);">
+                        <i class="bi bi-ticket-perforated" style="font-size:2.5rem;display:block;margin-bottom:1rem;"></i>
+                        No tickets yet. Create one to get started.
+                    </td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- CREATE TICKET MODAL -->
+<div class="modal-nd" id="createModal" onclick="if(event.target===this)this.classList.remove('show')">
+    <div class="modal-box" style="max-width:520px;">
+        <div class="modal-title"><i class="bi bi-plus-circle" style="color:var(--accent-cyan);margin-right:8px;"></i>Create New Ticket</div>
+        <form method="post" action="/tickets/create">
+            <div class="form-group" style="margin-bottom:1rem;">
+                <label class="form-label">Title *</label>
+                <input type="text" name="title" class="form-input" placeholder="Brief description of the issue" required>
+            </div>
+            <div class="form-group" style="margin-bottom:1rem;">
+                <label class="form-label">Description</label>
+                <textarea name="description" class="form-input" rows="3" placeholder="Detailed description of the problem..." style="resize:vertical;"></textarea>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+                <div>
+                    <label class="form-label">Priority</label>
+                    <select name="priority" class="form-input">
+                        <option value="low">Low</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="high">High</option>
+                        <option value="critical">Critical</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label">Related Device</label>
+                    <select name="device_id" class="form-input">
+                        <option value="">None</option>
+                        {% for device in devices %}
+                        <option value="{{ device.id }}">{{ device.device_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div style="display:flex;gap:1rem;justify-content:flex-end;">
+                <button type="button" class="btn-ghost" onclick="document.getElementById('createModal').classList.remove('show')">Cancel</button>
+                <button type="submit" class="btn-primary-nd"><i class="bi bi-plus-lg"></i> Create Ticket</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- UPDATE TICKET MODAL -->
+<div class="modal-nd" id="updateModal" onclick="if(event.target===this)this.classList.remove('show')">
+    <div class="modal-box" style="max-width:400px;">
+        <div class="modal-title"><i class="bi bi-pencil-square" style="color:var(--accent-blue);margin-right:8px;"></i>Update Ticket</div>
+        <form method="post" id="updateForm">
+            <div style="margin-bottom:1rem;">
+                <label class="form-label">Status</label>
+                <select name="status" id="updateStatus" class="form-input">
+                    <option value="open">Open</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="resolved">Resolved</option>
+                    <option value="closed">Closed</option>
+                </select>
+            </div>
+            <div style="margin-bottom:1.5rem;">
+                <label class="form-label">Assign To</label>
+                <select name="assigned_to" class="form-input">
+                    <option value="">Unassigned</option>
+                    {% for tech in technicians %}
+                    <option value="{{ tech.id }}">{{ tech.username }} ({{ tech.role }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div style="display:flex;gap:1rem;justify-content:flex-end;">
+                <button type="button" class="btn-ghost" onclick="document.getElementById('updateModal').classList.remove('show')">Cancel</button>
+                <button type="submit" class="btn-primary-nd">Update</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function openUpdate(id, currentStatus) {
+    document.getElementById('updateForm').action = '/tickets/update/' + id;
+    document.getElementById('updateStatus').value = currentStatus;
+    document.getElementById('updateModal').classList.add('show');
+}
+
+// Filter buttons
+document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        const filter = this.dataset.filter;
+        document.querySelectorAll('#ticketTable tbody tr[data-status]').forEach(row => {
+            row.style.display = (filter === 'all' || row.dataset.status === filter) ? '' : 'none';
+        });
+    });
+});
+
+// Search
+document.getElementById('ticketSearch').addEventListener('input', function() {
+    const q = this.value.toLowerCase();
+    document.querySelectorAll('#ticketTable tbody tr').forEach(row => {
+        row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+});
+</script>
+<style>
+.filter-btn {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    padding: 0.4rem 0.9rem;
+    border-radius: 100px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: 'Sora', sans-serif;
+    transition: all 0.15s;
+}
+.filter-btn.active, .filter-btn:hover {
+    background: rgba(37,99,235,0.15);
+    color: var(--accent-cyan);
+    border-color: rgba(37,99,235,0.4);
+}
+</style>
+{% endblock %}

@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% block title %}Devices{% endblock %}
+{% block page_title %}Device Management{% endblock %}
+{% block page_subtitle %}Monitor and manage network devices{% endblock %}
+
+{% block topbar_actions %}
+<button class="btn-ghost" onclick="pingAllDevices()"><i class="bi bi-arrow-repeat"></i> Ping All</button>
+{% if user.role in ['admin', 'technician'] %}
+<button class="btn-primary-nd" onclick="document.getElementById('addModal').classList.add('show')">
+    <i class="bi bi-plus-lg"></i> Add Device
+</button>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="panel">
+    <div class="panel-header">
+        <div class="panel-title"><i class="bi bi-hdd-network" style="color:var(--accent-cyan);margin-right:6px;"></i>All Devices ({{ devices|length }})</div>
+        <input type="text" id="searchBox" class="form-input" placeholder="Search devices..." style="width:220px;padding:0.4rem 0.8rem;font-size:0.82rem;">
+    </div>
+
+    <div style="overflow-x:auto;">
+        <table class="data-table" id="deviceTable">
+            <thead>
+                <tr>
+                    <th>Device Name</th>
+                    <th>IP Address</th>
+                    <th>Type</th>
+                    <th>Location</th>
+                    <th>Status</th>
+                    <th>Last Checked</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if devices %}
+                    {% for device in devices %}
+                    <tr id="device-row-{{ device.id }}">
+                        <td>
+                            <div style="display:flex;align-items:center;gap:0.7rem;">
+                                <div style="width:32px;height:32px;border-radius:8px;background:rgba(37,99,235,0.12);display:flex;align-items:center;justify-content:center;">
+                                    {% if device.device_type == 'router' %}<i class="bi bi-router" style="color:var(--accent-blue);"></i>
+                                    {% elif device.device_type == 'switch' %}<i class="bi bi-diagram-3" style="color:var(--accent-cyan);"></i>
+                                    {% elif device.device_type == 'server' %}<i class="bi bi-server" style="color:var(--accent-purple);"></i>
+                                    {% elif device.device_type == 'printer' %}<i class="bi bi-printer" style="color:var(--accent-yellow);"></i>
+                                    {% elif device.device_type == 'access_point' %}<i class="bi bi-wifi" style="color:var(--accent-green);"></i>
+                                    {% else %}<i class="bi bi-pc-display" style="color:#94a3b8;"></i>{% endif %}
+                                </div>
+                                <span style="font-weight:600;">{{ device.device_name }}</span>
+                            </div>
+                        </td>
+                        <td><span style="font-family:'JetBrains Mono',monospace;font-size:0.82rem;color:var(--accent-cyan);">{{ device.ip_address }}</span></td>
+                        <td><span style="color:var(--text-secondary);font-size:0.82rem;text-transform:capitalize;">{{ device.device_type or '—' }}</span></td>
+                        <td><span style="color:var(--text-secondary);font-size:0.82rem;">{{ device.location or '—' }}</span></td>
+                        <td>
+                            <span class="badge-status badge-{{ device.status }}" id="status-{{ device.id }}">
+                                {{ device.status }}
+                            </span>
+                        </td>
+                        <td style="font-size:0.78rem;color:var(--text-muted);font-family:'JetBrains Mono',monospace;">
+                            {{ device.last_checked.strftime('%d %b %H:%M') if device.last_checked else '—' }}
+                        </td>
+                        <td>
+                            <div style="display:flex;gap:0.5rem;align-items:center;">
+                                <button class="btn-ghost" style="padding:0.3rem 0.7rem;font-size:0.75rem;" onclick="pingDevice({{ device.id }}, '{{ device.device_name }}')">
+                                    <i class="bi bi-reception-4"></i> Ping
+                                </button>
+                                {% if user.role == 'admin' %}
+                                <form method="post" action="/devices/delete/{{ device.id }}" style="display:inline;" onsubmit="return confirm('Delete {{ device.device_name }}?')">
+                                    <button type="submit" class="btn-danger-nd"><i class="bi bi-trash3"></i></button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr><td colspan="7" style="text-align:center;padding:3rem;color:var(--text-muted);">
+                        <i class="bi bi-hdd-network" style="font-size:2.5rem;display:block;margin-bottom:1rem;"></i>
+                        No devices added yet. Click "Add Device" to get started.
+                    </td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ADD DEVICE MODAL -->
+<div class="modal-nd" id="addModal" onclick="if(event.target===this)this.classList.remove('show')">
+    <div class="modal-box">
+        <div class="modal-title"><i class="bi bi-plus-circle" style="color:var(--accent-cyan);margin-right:8px;"></i>Add New Device</div>
+        <form method="post" action="/devices/add">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                <div>
+                    <label class="form-label">Device Name *</label>
+                    <input type="text" name="device_name" class="form-input" placeholder="e.g. Main Router" required>
+                </div>
+                <div>
+                    <label class="form-label">IP Address *</label>
+                    <input type="text" name="ip_address" class="form-input" placeholder="e.g. 192.168.1.1" required>
+                </div>
+            </div>
+            <div style="margin-top:1rem;display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                <div>
+                    <label class="form-label">Device Type</label>
+                    <select name="device_type" class="form-input">
+                        <option value="router">Router</option>
+                        <option value="switch">Switch</option>
+                        <option value="server">Server</option>
+                        <option value="pc">PC</option>
+                        <option value="printer">Printer</option>
+                        <option value="access_point">Access Point</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label">Location</label>
+                    <input type="text" name="location" class="form-input" placeholder="e.g. Server Room">
+                </div>
+            </div>
+            <div style="display:flex;gap:1rem;margin-top:1.5rem;justify-content:flex-end;">
+                <button type="button" class="btn-ghost" onclick="document.getElementById('addModal').classList.remove('show')">Cancel</button>
+                <button type="submit" class="btn-primary-nd"><i class="bi bi-plus-lg"></i> Add Device</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Ping Toast -->
+<div id="pingToast" style="position:fixed;bottom:1.5rem;right:1.5rem;z-index:9999;display:none;">
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:0.9rem 1.3rem;min-width:260px;font-size:0.85rem;" id="pingToastContent"></div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+async function pingDevice(id, name) {
+    const statusEl = document.getElementById('status-' + id);
+    statusEl.innerHTML = '⟳ checking...';
+    statusEl.className = 'badge-status badge-unknown';
+    const toast = document.getElementById('pingToast');
+    const content = document.getElementById('pingToastContent');
+    toast.style.display = 'block';
+    content.innerHTML = `Pinging <strong>${name}</strong>...`;
+    try {
+        const res = await fetch('/devices/ping/' + id);
+        const data = await res.json();
+        statusEl.className = 'badge-status badge-' + data.status;
+        statusEl.textContent = data.status;
+        const icon = data.status === 'online' ? '🟢' : '🔴';
+        content.innerHTML = `${icon} <strong>${name}</strong> is <strong>${data.status}</strong>`;
+        setTimeout(() => toast.style.display='none', 3000);
+    } catch(e) {
+        content.innerHTML = '❌ Ping error';
+        setTimeout(() => toast.style.display='none', 2000);
+    }
+}
+
+async function pingAllDevices() {
+    const toast = document.getElementById('pingToast');
+    const content = document.getElementById('pingToastContent');
+    toast.style.display = 'block';
+    content.innerHTML = '⟳ Pinging all devices...';
+    const res = await fetch('/devices/ping-all');
+    const data = await res.json();
+    const online = data.results.filter(r => r.status === 'online').length;
+    const offline = data.results.filter(r => r.status === 'offline').length;
+    content.innerHTML = `✅ Done — <strong style="color:#10b981">${online} online</strong>, <strong style="color:#ef4444">${offline} offline</strong>`;
+    setTimeout(() => { toast.style.display='none'; location.reload(); }, 2500);
+}
+
+// Search filter
+document.getElementById('searchBox').addEventListener('input', function() {
+    const q = this.value.toLowerCase();
+    document.querySelectorAll('#deviceTable tbody tr').forEach(row => {
+        row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+});
+</script>
+{% endblock %}
