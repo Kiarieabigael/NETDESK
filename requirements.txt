@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+sqlalchemy
+jinja2
+python-multipart
+passlib[bcrypt]
+python-jose
+ping3
+psutil
+aiosqlite
